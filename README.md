@@ -1,18 +1,18 @@
 # CrisisDesk
 
-Map-based disaster operations panel. Incident records, team creation, team assignment, and event-based messaging are managed in a single interface.
+Harita tabanlı afet operasyon paneli. Olay kayıtları, ekip oluşturma, ekip atama ve olay bazlı mesajlaşma akışları tek bir arayüzde yönetilir.
 
-## One Line
+## Kısa Tanım
 
-Modern disaster operations dashboard MVP.
+Modern bir afet operasyon paneli MVP'si.
 
-## Ozellikler
+## Özellikler
 
-- Harita uzerinde aktif olay ve ekip gorunumu
-- Yeni afet kaydi ve olay detay yonetimi
-- Yeni ekip olusturma ve gorev atama
-- Olay bazli sohbet ve aktivite gecmisi
-- SQLite destekli yerel veri kaliciligi
+- Harita üzerinde aktif olay ve ekip görünümü
+- Yeni afet kaydı ve olay detay yönetimi
+- Yeni ekip oluşturma ve görev atama
+- Olay bazlı sohbet ve aktivite geçmişi
+- SQLite destekli yerel veri kalıcılığı
 
 ## Teknoloji
 
@@ -23,7 +23,7 @@ Modern disaster operations dashboard MVP.
 - SQLite
 - Leaflet
 
-## Calistirma
+## Çalıştırma
 
 ```bash
 python server.py
@@ -33,6 +33,6 @@ python server.py
 http://localhost:8000
 ```
 
-## Konumlandirma
+## Konumlandırma
 
-This repository is not an official institution product. It is a presentation-ready open source operations panel MVP.
+Bu repo resmi bir kurum ürünü değildir. Açık kaynak sunuma uygun, modern bir operasyon paneli MVP çalışmasıdır.

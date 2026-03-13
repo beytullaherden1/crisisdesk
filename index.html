@@ -1,0 +1,459 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrisisDesk - Disaster Operations Panel</title>
+    <meta name="description" content="Map-based disaster operations panel for incident tracking, team coordination, and field communication.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+<aside class="sidebar">
+<div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-shield-halved"></i>
+                    <span>CrisisDesk</span>
+                </div>
+                <div class="live-status" id="live-status-pill">
+                    <i class="fas fa-circle"></i>
+                    <span id="live-status-text">Canli</span>
+                </div>
+            </div>
+<div class="quick-stats">
+                <div class="stat-mini">
+                    <i class="fas fa-users"></i>
+                    <div>
+                        <span class="stat-num" id="team-count">0</span>
+                        <span class="stat-txt">Ekip</span>
+                    </div>
+                </div>
+                <div class="stat-mini">
+                    <i class="fas fa-triangle-exclamation"></i>
+                    <div>
+                        <span class="stat-num" id="disaster-count">0</span>
+                        <span class="stat-txt">Olay</span>
+                    </div>
+                </div>
+                <div class="stat-mini">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <span class="stat-num" id="response-time">--</span>
+                        <span class="stat-txt">Mudahale</span>
+                    </div>
+                </div>
+            </div>
+<button class="btn-report" onclick="openReportModal()">
+                <i class="fas fa-plus-circle"></i>
+                <span>Afet Bildir</span>
+            </button>
+<div class="tabs">
+                <button class="tab-btn active" data-tab="disasters" onclick="switchTab('disasters')">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Olaylar</span>
+                </button>
+                <button class="tab-btn" data-tab="teams" onclick="switchTab('teams')">
+                    <i class="fas fa-users"></i>
+                    <span>Ekipler</span>
+                </button>
+                <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">
+                    <i class="fas fa-messages"></i>
+                    <span>Iletisim</span>
+                </button>
+            </div>
+<div class="tab-content active" id="disasters-tab">
+                <div class="section-header">
+                    <h3>Aktif Olaylar</h3>
+                    <button class="icon-btn" onclick="refreshDisasters()">
+                        <i class="fas fa-rotate"></i>
+                    </button>
+                </div>
+                <ul id="disasters-list" class="items-list"></ul>
+            </div>
+
+            <div class="tab-content" id="teams-tab">
+                <div class="section-header">
+                    <h3>Aktif Ekipler</h3>
+                    <button class="section-action-btn" onclick="openTeamModal()">
+                        <i class="fas fa-plus"></i>
+                        Yeni Ekip
+                    </button>
+                </div>
+                <ul id="teams-list" class="items-list"></ul>
+            </div>
+
+            <div class="tab-content" id="chat-tab">
+                <div class="section-header">
+                    <h3>Afet Iletisim Kanallari</h3>
+                    <button class="icon-btn" onclick="refreshChatRooms()">
+                        <i class="fas fa-rotate"></i>
+                    </button>
+                </div>
+
+                <div id="chat-rooms-list" class="chat-rooms-list"></div>
+
+                <div class="chat-container" id="chat-interface" style="display: none;">
+                    <div class="chat-header" id="chat-current-header">
+                        <div class="chat-header-title">
+                            <i class="fas fa-comments"></i>
+                            <span id="chat-room-name">Genel Iletisim</span>
+                        </div>
+                        <button class="btn-close-chat" onclick="closeChatRoom()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="chat-window" class="chat-window"></div>
+                    <div class="chat-input-wrapper">
+                        <input type="text" id="chat-input" placeholder="Mesaj yazin..."
+                            onkeypress="handleChatKeyPress(event)">
+                        <button onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+<div class="sidebar-footer">
+                <div class="footer-time" id="datetime"></div>
+                <div class="footer-sync" id="sync-status">Veriler hazirlaniyor</div>
+            </div>
+        </aside>
+<main class="map-area">
+            <div id="map"></div>
+<div class="map-controls">
+                <button class="map-btn" onclick="centerMap()" title="Merkeze Don">
+                    <i class="fas fa-crosshairs"></i>
+                </button>
+                <button class="map-btn" onclick="toggleHeatmap()" title="Yogunluk Haritasi">
+                    <i class="fas fa-fire"></i>
+                </button>
+                <button class="map-btn" onclick="toggleFullscreen()" title="Tam Ekran">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+<div class="map-legend">
+                <div class="legend-item">
+                    <span class="dot danger"></span>
+                    <span>Yuksek</span>
+                </div>
+                <div class="legend-item">
+                    <span class="dot warning"></span>
+                    <span>Orta</span>
+                </div>
+                <div class="legend-item">
+                    <span class="dot success"></span>
+                    <span>Dusuk</span>
+                </div>
+            </div>
+        </main>
+    </div>
+<div id="report-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Afet Bildir
+                </h2>
+                <button class="modal-close" onclick="closeReportModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="report-form" onsubmit="submitDisasterReport(event)">
+                <div class="form-group">
+                    <label>
+                        <i class="fas fa-tag"></i>
+                        Afet Turu
+                    </label>
+                    <select id="disaster-type" required>
+                        <option value="">Seciniz...</option>
+                        <option value="Deprem">Deprem</option>
+                        <option value="Yangin">Yangin</option>
+                        <option value="Sel">Sel Baskini</option>
+                        <option value="Heyelan">Heyelan</option>
+                        <option value="Firtina">Firtina / Hortum</option>
+                        <option value="Kar">Kar Firtinasi</option>
+                        <option value="Diger">Diger</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <i class="fas fa-location-dot"></i>
+                        Sehir
+                    </label>
+                    <input type="text" id="disaster-city" placeholder="Orn: Istanbul, Ankara" required>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <i class="fas fa-map-pin"></i>
+                        Ilce / Bolge
+                    </label>
+                    <input type="text" id="disaster-district" placeholder="Orn: Kadikoy, Cankaya">
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <i class="fas fa-gauge-high"></i>
+                        Oncelik Seviyesi
+                    </label>
+                    <select id="disaster-severity" required>
+                        <option value="">Seciniz...</option>
+                        <option value="low">Dusuk - Kontrol Altinda</option>
+                        <option value="medium">Orta - Dikkat Gerekli</option>
+                        <option value="high">Yuksek - Acil Mudahale</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <i class="fas fa-align-left"></i>
+                        Aciklama
+                    </label>
+                    <textarea id="disaster-description" rows="3" placeholder="Afetle ilgili detayli bilgi giriniz..."
+                        required></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-user"></i>
+                            Ilgili Kisi
+                        </label>
+                        <input type="text" id="disaster-contact" placeholder="Isim Soyisim">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-phone"></i>
+                            Telefon
+                        </label>
+                        <input type="tel" id="disaster-phone" placeholder="0XXX XXX XX XX">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeReportModal()">
+                        Iptal
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                        Bildir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+<div id="disaster-details-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>
+                    <i class="fas fa-circle-info"></i>
+                    Afet Detaylari
+                </h2>
+                <button class="modal-close" onclick="closeDisasterDetailsModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="padding: 20px;">
+<div class="disaster-details-section">
+                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">
+                        Temel Bilgiler
+                    </h3>
+                    <div class="detail-row">
+                        <span class="detail-label">
+                            <i class="fas fa-tag"></i>
+                            Afet Turu
+                        </span>
+                        <span class="detail-value" id="detail-type">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">
+                            <i class="fas fa-location-dot"></i>
+                            Konum
+                        </span>
+                        <span class="detail-value" id="detail-location">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">
+                            <i class="fas fa-gauge-high"></i>
+                            Oncelik
+                        </span>
+                        <span class="detail-value" id="detail-severity">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">
+                            <i class="fas fa-wave-square"></i>
+                            Operasyon Durumu
+                        </span>
+                        <span class="detail-value" id="detail-status">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">
+                            <i class="fas fa-clock"></i>
+                            Bildirim Zamani
+                        </span>
+                        <span class="detail-value" id="detail-time">-</span>
+                    </div>
+                    <div class="detail-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                        <span class="detail-label">
+                            <i class="fas fa-align-left"></i>
+                            Aciklama
+                        </span>
+                        <span class="detail-value" id="detail-description"
+                            style="font-weight: 400; color: var(--text-secondary);">-</span>
+                    </div>
+                </div>
+<div class="disaster-details-section" id="contact-section" style="display: none;">
+                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">
+                        Iletisim Bilgileri
+                    </h3>
+                    <div class="detail-row">
+                        <span class="detail-label">
+                            <i class="fas fa-user"></i>
+                            Ilgili Kisi
+                        </span>
+                        <span class="detail-value" id="detail-contact">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">
+                            <i class="fas fa-phone"></i>
+                            Telefon
+                        </span>
+                        <span class="detail-value" id="detail-phone">-</span>
+                    </div>
+                </div>
+<div class="disaster-details-section">
+                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">
+                        Ekip Atamasi
+                    </h3>
+                    <div class="team-assignment">
+                        <div class="team-select-wrapper">
+                            <select id="team-select-dropdown">
+                                <option value="">Ekip secin...</option>
+                            </select>
+                            <button class="btn-assign" onclick="assignTeamToDisaster()">
+                                <i class="fas fa-plus"></i>
+                                Ata
+                            </button>
+                        </div>
+                        <div class="assigned-teams-list" id="assigned-teams-container">
+</div>
+                    </div>
+                </div>
+
+                <div class="disaster-details-section">
+                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">
+                        Aktivite Gecmisi
+                    </h3>
+                    <div class="activity-log-list" id="activity-log-container"></div>
+                </div>
+<div class="form-actions" style="margin-top: 20px;">
+                    <button type="button" class="btn-secondary" onclick="closeDisasterDetailsModal()">
+                        Kapat
+                    </button>
+                    <button type="button" class="btn-danger" id="resolve-disaster-btn" onclick="resolveCurrentDisaster()">
+                        <i class="fas fa-check-double"></i>
+                        Cozuldu
+                    </button>
+                    <button type="button" class="btn-primary" onclick="openDisasterChat()">
+                        <i class="fas fa-comments"></i>
+                        Sohbeti Ac
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+<div id="team-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>
+                    <i class="fas fa-users"></i>
+                    Yeni Ekip Olustur
+                </h2>
+                <button class="modal-close" onclick="closeTeamModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="team-form" onsubmit="submitTeamForm(event)">
+                <div class="form-group">
+                    <label>
+                        <i class="fas fa-users"></i>
+                        Ekip Adi
+                    </label>
+                    <input type="text" id="team-name" placeholder="Orn: Kuzey Destek Ekibi" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-user-group"></i>
+                            Kisi Sayisi
+                        </label>
+                        <input type="number" id="team-members" min="1" max="250" placeholder="8" required>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-signal"></i>
+                            Durum
+                        </label>
+                        <select id="team-status" required>
+                            <option value="active">Aktif</option>
+                            <option value="standby">Beklemede</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <i class="fas fa-briefcase"></i>
+                        Gorev Alani
+                    </label>
+                    <input type="text" id="team-mission" placeholder="Orn: Arama Kurtarma" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-location-dot"></i>
+                            Enlem
+                        </label>
+                        <input type="number" id="team-lat" step="0.0001" min="35" max="43" placeholder="39.9334" required>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-location-crosshairs"></i>
+                            Boylam
+                        </label>
+                        <input type="number" id="team-lng" step="0.0001" min="25" max="45" placeholder="32.8597" required>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeTeamModal()">
+                        Iptal
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-plus-circle"></i>
+                        Ekibi Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+<div id="notification-container"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="main.js"></script>
+</body>
+
+</html>
+
